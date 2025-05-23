@@ -1,0 +1,9 @@
+type: s3
+config:
+  bucket: thanos
+  endpoint: 203.0.113.10:32000
+  access_key: CHANGE_ME_MINIO_CREDENTIAL
+  secret_key: CHANGE_ME_MINIO_CREDENTIAL
+  insecure: true
+  signature_version2: true
+

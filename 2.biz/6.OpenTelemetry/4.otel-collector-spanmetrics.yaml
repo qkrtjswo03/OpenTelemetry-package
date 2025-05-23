@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: otel-collector-spanmetrics
+  namespace: otel-trace
+spec:
+  # point to the headless service
+  selector:
+    matchLabels:
+      operator.opentelemetry.io/collector-service-type: headless
+  endpoints:
+    # port name should match the one defined in the collector CRD
+    - port: http-metrics
+      interval: 30s
+      metricRelabelings:
+      - sourceLabels: [__name__]
+        targetLabel: __name__
+        regex: 'traces_spanmetrics_duration_seconds(_bucket|_sum|_count)?'
+        replacement: 'traces_spanmetrics_latency${1}'
