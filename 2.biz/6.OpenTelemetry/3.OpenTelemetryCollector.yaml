@@ -1,0 +1,161 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: collector
+  namespace: otel-trace
+spec:
+  image: otel/opentelemetry-collector-contrib:0.93.0
+  mode: deployment
+  ports:
+    - name: loki
+      port: 3500
+      protocol: TCP
+      targetPort: 3500
+    - name: metrics
+      port: 8888
+      protocol: TCP
+      targetPort: 8888
+  config:
+    receivers:
+      loki:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:3500
+        use_incoming_timestamp: true
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus:
+        config:
+          scrape_configs:
+          - job_name: "prometheus"
+            scrape_interval: 10s
+            static_configs:
+              - targets: ["localhost:8889"]
+          - job_name: "otel-collector"
+            scrape_interval: 10s
+            static_configs:
+              - targets: ["collector-collector.otel-trace.svc.cluster.local:8888"]
+
+    processors:
+      attributes/add_trace_context:
+        actions:
+          - key: traceid
+            from_attribute: trace_id
+            action: insert
+          - key: spanid
+            from_attribute: span_id
+            action: insert
+          - key: service_name
+            from_attribute: service.name
+            action: insert
+          - key: loki.format
+            action: insert
+            value: json
+      attributes/add_protocol_label:
+        actions:
+          - key: protocol
+            value: grpc
+            action: insert
+
+      memory_limiter:
+        check_interval: 1s
+        limit_percentage: 75
+        spike_limit_percentage: 15
+
+      batch:
+        send_batch_size: 10000
+        timeout: 10s
+
+      resource:
+        attributes:
+        - action: insert
+          key: service_name
+          from_attribute: service.name
+        - action: insert
+          key: service_namespace
+          from_attribute: service.namespace
+        - action: insert
+          key: compose_service
+          from_attribute: compose_service
+        - action: insert
+          key: loki.resource.labels
+          value: "service_name,service_namespace,k8s.namespace.name,k8s.pod.name"
+
+    exporters:
+      otlphttp/tempo:
+        endpoint: http://tempo-distributor.tempo.svc.cluster.local:4318
+      prometheus:
+        endpoint: "0.0.0.0:8889"
+      prometheusremotewrite:
+        endpoint: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write
+      loki:
+        endpoint: http://loki-loki-distributed-gateway.monitoring.svc.cluster.local:80/loki/api/v1/push
+        default_labels_enabled:
+          service.name: true
+          trace_id: true
+          span_id: true
+        sending_queue:
+          enabled: true
+          num_consumers: 10
+          queue_size: 1000
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_elapsed_time: 300s
+
+    extensions:
+      zpages:
+        endpoint: 0.0.0.0:55679
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [zpages, health_check]
+      telemetry:
+        metrics:
+          level: detailed
+          address: "0.0.0.0:8888"
+
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlphttp/tempo, spanmetrics, servicegraph]
+        metrics:
+          receivers: [otlp, spanmetrics, servicegraph]
+          processors: [memory_limiter, batch]
+          exporters: [prometheus]
+        logs:
+          receivers: [otlp, loki]
+          processors: [memory_limiter, resource, attributes/add_trace_context, batch]
+          exporters: [loki]
+
+    connectors:
+      servicegraph:
+        store:
+          ttl: 2m
+        latency_histogram_buckets: [100ms, 250ms, 1s, 5s, 10s]
+      spanmetrics:
+        namespace: traces.spanmetrics
+        histogram:
+          explicit:
+            buckets: [100us, 1ms, 2ms, 6ms, 10ms, 100ms, 250ms]
+        dimensions:
+          - name: http.method
+            default: GET
+          - name: http.status_code
+          - name: host.name
+        exemplars:
+          enabled: true
+        dimensions_cache_size: 1000
+        aggregation_temporality: "AGGREGATION_TEMPORALITY_CUMULATIVE"
+        metrics_flush_interval: 15s
+        events:
+          enabled: true
+          dimensions:
+            - name: exception.type
+            - name: exception.message

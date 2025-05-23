@@ -1,0 +1,9 @@
+type: s3
+config:
+  bucket: thanos
+  endpoint: 121.141.64.224:32000
+  access_key: minioadmin
+  secret_key: minioadmin
+  insecure: true
+  signature_version2: true
+

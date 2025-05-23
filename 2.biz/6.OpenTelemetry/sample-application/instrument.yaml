@@ -1,0 +1,16 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: python-instrumentation
+  namespace: test
+spec:
+  exporter:
+    endpoint: http://collector-collector.otel-trace.svc.cluster.local:4318
+  env:
+  propagators:
+    - tracecontext
+    - baggage
+  python:
+    env:
+      - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+        value: 'true'

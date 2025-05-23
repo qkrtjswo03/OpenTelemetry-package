@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "1"
+    meta.helm.sh/release-name: promtail
+    meta.helm.sh/release-namespace: monitoring
+  creationTimestamp: "2025-02-18T11:21:03Z"
+  generation: 1
+  labels:
+    app.kubernetes.io/instance: promtail
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/version: 3.0.0
+    helm.sh/chart: promtail-6.16.6
+  name: promtail
+  namespace: monitoring
+  resourceVersion: "139265126"
+  uid: d7951be1-b5da-40b7-b12f-487109dfa038
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: promtail
+      app.kubernetes.io/name: promtail
+  template:
+    metadata:
+      annotations:
+        checksum/config: 66f0a85cc486b8b57943181fb08721aaeb3499df13e6b06bfd32eef0c7535ab1
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/instance: promtail
+        app.kubernetes.io/name: promtail
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - args:
+        - -config.file=/etc/promtail/promtail.yaml
+        env:
+        - name: HOSTNAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        image: docker.io/grafana/promtail:3.0.0
+        imagePullPolicy: IfNotPresent
+        name: promtail
+        ports:
+        - containerPort: 3101
+          name: http-metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /ready
+            port: http-metrics
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/promtail
+          name: config
+        - mountPath: /run/promtail
+          name: run
+        - mountPath: /var/lib/docker/containers
+          name: containers
+          readOnly: true
+        - mountPath: /var/log/pods
+          name: pods
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsGroup: 0
+        runAsUser: 0
+      serviceAccount: promtail
+      serviceAccountName: promtail
+      terminationGracePeriodSeconds: 30
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+        operator: Exists
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+        operator: Exists
+      volumes:
+      - name: config
+        secret:
+          defaultMode: 420
+          secretName: promtail
+      - hostPath:
+          path: /run/promtail
+          type: ""
+        name: run
+      - hostPath:
+          path: /var/lib/docker/containers
+          type: ""
+        name: containers
+      - hostPath:
+          path: /var/log/pods
+          type: ""
+        name: pods
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+status:
+  currentNumberScheduled: 13
+  desiredNumberScheduled: 13
+  numberAvailable: 13
+  numberMisscheduled: 0
+  numberReady: 13
+  observedGeneration: 1
+  updatedNumberScheduled: 13
