@@ -1,3 +1,7 @@
+# Management 클러스터 설치
+
+상위 개요, 현재 values의 NodePort, 구성 설명은 저장소 루트 [README.md](../README.md)에 있습니다.
+
 # **1. MinIO Install**
 
 ## **1-1. 네임스페이스 생성**
@@ -74,7 +78,7 @@ replicaset.apps/minio-856d97c98c   1         1         1       47h
 - `Minio-Console` : `32001`
 
 ```
-# MGMT MINIO(METRCICS) Web Console ######################################
+# MGMT MINIO(METRICS) Web Console ######################################
 listen minio-api
   bind *:32000
   mode tcp
@@ -99,7 +103,7 @@ listen minio-console
 - 콘솔 접속 확인
     - [[MGMT] MINIO_Console](http://203.0.113.10:32001/browser)
 
-Open image-20250521-062003.png
+가이드가 참조하는 콘솔 캡처 `image-20250521-062003.png` 는 이 저장소에 포함되어 있지 않습니다.
 
 `Default Bucket : thanos`
 
@@ -221,7 +225,7 @@ ruler:
 ## **3-2. Thanos helm install**
 
 ```
-:~/backup/platform-monitoring/1.mgmt/3.thanos# helm install thanos . -n monitoring
+~/backup/platform-monitoring/1.mgmt/3.thanos# helm install thanos . -n monitoring
 ```
 
 - 배포 확인

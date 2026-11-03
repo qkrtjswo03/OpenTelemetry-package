@@ -1,3 +1,7 @@
+# Business 클러스터 설치
+
+상위 개요와 현재 values 기준 절차는 저장소 루트 [README.md](../README.md)에 있습니다. 이 문서는 원래의 설치 순서를 유지합니다.
+
 # **0. 사전 준비**
 
 - 네임스페이스 생성
@@ -5,7 +9,7 @@
 ```
 kubectl create ns monitoring      # 그라파나, 프로메테우스, 로키가 배포될 네임스페이스
 kubectl create ns minio           # Loki, Tempo 데이터가 저장될 MinIO 가 배포될 네임스페이스
-kubectl create ns tempo           # Tempo-distrubited 컴포넌트들이 배포 될 네임스페이스
+kubectl create ns tempo           # Tempo-distributed 컴포넌트들이 배포 될 네임스페이스
 kubectl create ns otel-trace      # OpenTelemetry Collector 가 배포 될 네임스페이스
 kubectl create ns test            # 샘플 어플리케이션이 올라갈 네임스페이스
 ```
@@ -15,7 +19,7 @@ kubectl create ns test            # 샘플 어플리케이션이 올라갈 네�
 - `2. biz` 디렉토리 구성은 아래와 같으며 번호 순서대로 설치를 진행하시면 됩니다.
 
 ```
-cd 1.biz ; ll
+cd 2.biz ; ll
 drwxr-xr-x 4 root root 4096 May 21 14:30 1.minio/
 drwxr-xr-x 4 root root 4096 May 21 09:45 2.kube-prometheus-stack/
 drwxr-xr-x 4 root root 4096 May 20 12:35 3.promtail/
@@ -73,7 +77,7 @@ provisioning:
 ```
 
 ```
-~/backup/platform-monitoring/1.mgmt/1.minio# helm install minio . -n minio
+~/backup/platform-monitoring/2.biz/1.minio# helm install minio . -n minio
 ```
 
 - 배포 확인
@@ -93,7 +97,7 @@ replicaset.apps/minio-856d97c98c   1         1         1       47h
 ## **1-3. Biz HAProxy 설정 ( MinIO )**
 
 ```
-# MGMT MINIO(METRCICS) Web Console ######################################
+# MGMT MINIO(METRICS) Web Console ######################################
 listen minio-api
   bind *:32000
   mode tcp
@@ -118,7 +122,7 @@ listen minio-console
 - 콘솔 접속 확인
     - [[ BIZ ] MINIO_Console](http://203.0.113.10:31002/browser) : `Default Bucket : k8s-Loki, k8s-Tempo`
 
-Open image-20250521-075631.png
+가이드가 참조하는 콘솔 캡처 `image-20250521-075631.png` 는 이 저장소에 포함되어 있지 않습니다.
 
 ---
 
@@ -158,7 +162,7 @@ kubeEtcd:
 ## **2-2. Prometheus-stack helm install**
 
 ```
-~/backup/platform-monitoring/1.mgmt/2.kube-prometheus-stack# helm install prometheus . -n monitoring
+~/backup/platform-monitoring/2.biz/2.kube-prometheus-stack# helm install prometheus . -n monitoring
 ```
 
 - 배포 확인
@@ -221,7 +225,7 @@ listen biz-prometheus
 - Promtail Helm 배포
 
 ```
-:~/backup/platform-monitoring/2.biz/3.promtail# helm install promtail . -n monitoring
+~/backup/platform-monitoring/2.biz/3.promtail# helm install promtail . -n monitoring
 ```
 
 ---
@@ -260,7 +264,7 @@ query-frontend:
 - Loki Distributed Helm 배포
 
 ```
-:~/backup/platform-monitoring/2.biz/4.loki-distriuted# helm install loki . -n monitoring
+~/backup/platform-monitoring/2.biz/4.loki-distriuted# helm install loki . -n monitoring
 ```
 
 - 아래와 같이 `loki-loki-distributed-gateway 서비스가 노드포트로 설정이 되어 있어야 됩니다. (MGMT Grafana 에서 BIZ Loki Datasource 연결하기 위함)`
@@ -316,7 +320,7 @@ ingester:
 - Tempo Distributed Helm 배포
 
 ```
-:~/backup/platform-monitoring/2.biz/5.Tempo-distriuted# helm install tempo . -n tempo
+~/backup/platform-monitoring/2.biz/5.tempo-distributed# helm install tempo . -n tempo
 ```
 
 - 아래와 같이 `tempo-gateway 서비스가 노드포트로 설정이 되어 있어야 됩니다. (MGMT Grafana 에서 BIZ Tempo Datasource 연결하기 위함)`
